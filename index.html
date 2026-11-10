@@ -3,169 +3,335 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scoreboard</title>
+  <title>Live Collaborative Scoreboard</title>
+  <!-- Tailwind CSS CDN for modern responsive UI styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 0 20px;
-      background-color: #f4f4f9;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .controls input {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .controls button {
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .controls button:hover {
-      background-color: #218838;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: white;
-      padding: 12px 15px;
-      margin-bottom: 8px;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .player-info {
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .actions button {
-      padding: 5px 10px;
-      margin-left: 5px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .reset-container {
-      margin-top: 30px;
-      text-align: center;
-    }
-    #reset-data-btn {
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #reset-data-btn:hover {
-      background-color: #c82333;
+      font-family: 'Inter', sans-serif;
     }
   </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between p-4 sm:p-6">
 
-  <h1>Scoreboard</h1>
+  <!-- Main Container -->
+  <div class="max-w-xl w-full mx-auto bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-5 sm:p-8 my-auto">
+    
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center p-3 bg-indigo-600/20 text-indigo-400 rounded-full mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+        </svg>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Live Scoreboard</h1>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1 flex items-center justify-center gap-1.5">
+        <span id="sync-status-indicator" class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-pulse"></span>
+        <span id="sync-status-text">Connecting live...</span>
+      </p>
+    </div>
 
-  <div class="controls">
-    <input type="text" id="username-input" placeholder="Enter new player name..." />
-    <button id="add-user-btn">Add Player</button>
+    <!-- Input Form -->
+    <form id="add-player-form" class="flex gap-2 mb-6">
+      <input 
+        type="text" 
+        id="player-name-input" 
+        placeholder="Enter player name..." 
+        required 
+        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm sm:text-base"
+      />
+      <button 
+        type="submit" 
+        class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/30 text-sm sm:text-base shrink-0 active:scale-95"
+      >
+        + Add
+      </button>
+    </form>
+
+    <!-- Scoreboard List Container -->
+    <div id="scoreboard-container" class="space-y-3 min-h-[160px] flex flex-col justify-center">
+      <!-- Loading State -->
+      <div id="loading-state" class="text-center py-8 text-slate-500 text-sm">
+        Loading players...
+      </div>
+      
+      <!-- List will be populated dynamically -->
+      <ul id="scoreboard-list" class="space-y-3 hidden"></ul>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-10 bg-slate-900/50 rounded-xl border border-dashed border-slate-700 p-4">
+        <p class="text-slate-400 font-medium text-sm sm:text-base">No players yet!</p>
+        <p class="text-xs text-slate-500 mt-1">Add a player above and start keeping score together live.</p>
+      </div>
+    </div>
+
+    <!-- Clear All Footer Button -->
+    <div class="mt-8 pt-4 border-t border-slate-700/60 flex justify-between items-center text-xs text-slate-400">
+      <span>Real-time Sync Active</span>
+      <button 
+        id="clear-all-btn" 
+        type="button" 
+        class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 px-3 py-1.5 rounded-lg transition-all font-medium"
+      >
+        Clear All Data
+      </button>
+    </div>
   </div>
 
-  <ul id="scoreboard-list">
-    <!-- Dynamic players will load here -->
-  </ul>
-
-  <div class="reset-container">
-    <button id="reset-data-btn">Clear All Data</button>
+  <!-- Custom Confirmation Modal (No browser alert/confirm used) -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xs w-full p-6 text-center shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-2">Reset Scoreboard?</h3>
+      <p class="text-xs text-slate-400 mb-6">This will delete all players and scores for everyone connected to this page.</p>
+      <div class="flex gap-3 justify-center">
+        <button id="modal-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm font-semibold transition-all">Cancel</button>
+        <button id="modal-confirm-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-rose-600/30">Reset All</button>
+      </div>
+    </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Load saved players from browser storage, defaulting to an empty array (no hardcoded data)
-      let players = JSON.parse(localStorage.getItem('scoreboard_players')) || [];
+  <!-- Firebase JavaScript Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot,
+      getDocs,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-      const render = () => {
-        const list = document.getElementById('scoreboard-list');
-        list.innerHTML = '';
+    // Application & Firebase Initialization
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'scoreboard-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+      ? JSON.parse(__firebase_config) 
+      : {
+          // Demo fallback configuration
+          apiKey: "AIzaSyDemoKeyForScoreboardCheckingOnly",
+          authDomain: "demo-scoreboard.firebaseapp.com",
+          projectId: "demo-scoreboard",
+          storageBucket: "demo-scoreboard.appspot.com",
+          messagingSenderId: "1234567890",
+          appId: "1:1234567890:web:demo"
+        };
 
-        if (players.length === 0) {
-          list.innerHTML = '<li style="justify-content: center; color: #777;">No players added yet. Add a player above to start!</li>';
-          return;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Collection path rule for public shared app data
+    const playersCollection = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+
+    // UI Elements
+    const form = document.getElementById('add-player-form');
+    const input = document.getElementById('player-name-input');
+    const scoreboardList = document.getElementById('scoreboard-list');
+    const emptyState = document.getElementById('empty-state');
+    const loadingState = document.getElementById('loading-state');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const syncStatusText = document.getElementById('sync-status-text');
+    const syncStatusIndicator = document.getElementById('sync-status-indicator');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+
+    let isAuthReady = false;
+
+    // Authenticate user before initiating Firestore operations
+    async function initAuth() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
         }
+        isAuthReady = true;
+        updateSyncStatus('Live Sync Connected', 'green');
+        subscribeToLiveUpdates();
+      } catch (err) {
+        console.error("Auth initialization error:", err);
+        updateSyncStatus('Sync Error', 'red');
+        loadingState.textContent = 'Failed to connect live updates.';
+      }
+    }
 
-        players.forEach((player, index) => {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <span class="player-info">${player.name}: ${player.score}</span>
-            <div class="actions">
-              <button onclick="updateScore(${index}, 1)">+</button>
-              <button onclick="updateScore(${index}, -1)">-</button>
-              <button onclick="removePlayer(${index})" style="background:#eee; border:none; border-radius:3px;">🗑️</button>
-            </div>
-          `;
-          list.appendChild(li);
+    // Update connection badge status
+    function updateSyncStatus(text, color) {
+      syncStatusText.textContent = text;
+      if (color === 'green') {
+        syncStatusIndicator.className = "w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse";
+      } else if (color === 'red') {
+        syncStatusIndicator.className = "w-2.5 h-2.5 bg-rose-500 rounded-full";
+      }
+    }
+
+    // Subscribe to real-time updates using onSnapshot
+    function subscribeToLiveUpdates() {
+      if (!isAuthReady) return;
+
+      onSnapshot(playersCollection, (snapshot) => {
+        loadingState.classList.add('hidden');
+        
+        const players = [];
+        snapshot.forEach((document) => {
+          players.push({ id: document.id, ...document.data() });
         });
 
-        localStorage.setItem('scoreboard_players', JSON.stringify(players));
-      };
+        // In-memory sort by highest score first, then player name
+        players.sort((a, b) => (b.score || 0) - (a.score || 0) || a.name.localeCompare(b.name));
 
-      window.updateScore = (index, change) => {
-        players[index].score += change;
-        render();
-      };
-
-      window.removePlayer = (index) => {
-        players.splice(index, 1);
-        render();
-      };
-
-      document.getElementById('add-user-btn').addEventListener('click', () => {
-        const nameInput = document.getElementById('username-input');
-        const nameValue = nameInput.value.trim();
-        if (nameValue !== '') {
-          players.push({ name: nameValue, score: 0 });
-          nameInput.value = '';
-          render();
-        }
+        renderScoreboard(players);
+      }, (error) => {
+        console.error("Realtime listener error:", error);
+        updateSyncStatus('Sync Error', 'red');
       });
+    }
 
-      // Allow pressing "Enter" in the input field to add a player
-      document.getElementById('username-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          document.getElementById('add-user-btn').click();
-        }
+    // Render players list dynamically
+    function renderScoreboard(players) {
+      scoreboardList.innerHTML = '';
+
+      if (players.length === 0) {
+        emptyState.classList.remove('hidden');
+        scoreboardList.classList.add('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      scoreboardList.classList.remove('hidden');
+
+      players.forEach((player) => {
+        const li = document.createElement('li');
+        li.className = "flex items-center justify-between bg-slate-900 border border-slate-700/80 p-3 sm:p-4 rounded-xl shadow-md transition-all hover:border-slate-600";
+        
+        li.innerHTML = `
+          <div class="flex items-center space-x-3 truncate mr-2">
+            <span class="font-bold text-white text-base sm:text-lg truncate max-w-[140px] sm:max-w-[200px]">${escapeHTML(player.name)}</span>
+          </div>
+
+          <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            <span class="text-xl sm:text-2xl font-extrabold text-indigo-400 min-w-[3rem] text-center">${player.score || 0}</span>
+            <div class="flex items-center space-x-1">
+              <button 
+                data-id="${player.id}" 
+                data-action="dec" 
+                class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center font-bold text-base transition-all active:scale-95"
+              >-</button>
+              <button 
+                data-id="${player.id}" 
+                data-action="inc" 
+                class="bg-indigo-600 hover:bg-indigo-500 text-white w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center font-bold text-base transition-all active:scale-95 shadow-md shadow-indigo-600/30"
+              >+</button>
+              <button 
+                data-id="${player.id}" 
+                data-action="del" 
+                class="bg-slate-800 hover:bg-rose-950/50 text-slate-500 hover:text-rose-400 border border-slate-700 hover:border-rose-800/50 w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center transition-all ml-1"
+                title="Remove Player"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+
+        scoreboardList.appendChild(li);
       });
+    }
 
-      document.getElementById('reset-data-btn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all players and scores?')) {
-          players = [];
-          localStorage.removeItem('scoreboard_players');
-          render();
-        }
-      });
+    // Helper to escape HTML tags to prevent XSS
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
 
-      render();
+    // Add Player Event
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name || !isAuthReady) return;
+
+      try {
+        input.value = '';
+        await addDoc(playersCollection, {
+          name: name,
+          score: 0,
+          createdAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error("Error adding player:", err);
+      }
     });
-  </script>
 
+    // Score modification & removal event listener delegation
+    scoreboardList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn || !isAuthReady) return;
+
+      const playerId = btn.dataset.id;
+      const action = btn.dataset.action;
+      if (!playerId || !action) return;
+
+      const playerRef = doc(playersCollection, playerId);
+
+      try {
+        if (action === 'inc') {
+          const scoreElem = btn.parentElement.previousElementSibling;
+          const currentScore = parseInt(scoreElem.textContent) || 0;
+          await updateDoc(playerRef, { score: currentScore + 1 });
+        } else if (action === 'dec') {
+          const scoreElem = btn.parentElement.previousElementSibling;
+          const currentScore = parseInt(scoreElem.textContent) || 0;
+          await updateDoc(playerRef, { score: currentScore - 1 });
+        } else if (action === 'del') {
+          await deleteDoc(playerRef);
+        }
+      } catch (err) {
+        console.error("Error updating player:", err);
+      }
+    });
+
+    // Clear All Confirmation Modal Logic
+    clearAllBtn.addEventListener('click', () => {
+      modalBackdrop.classList.remove('hidden');
+      modalBackdrop.classList.add('flex');
+    });
+
+    modalCancelBtn.addEventListener('click', () => {
+      modalBackdrop.classList.add('hidden');
+      modalBackdrop.classList.remove('flex');
+    });
+
+    modalConfirmBtn.addEventListener('click', async () => {
+      modalBackdrop.classList.add('hidden');
+      modalBackdrop.classList.remove('flex');
+
+      if (!isAuthReady) return;
+
+      try {
+        const snapshot = await getDocs(playersCollection);
+        const batch = writeBatch(db);
+        snapshot.forEach((document) => {
+          batch.delete(document.ref);
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error("Error clearing scoreboard:", err);
+      }
+    });
+
+    // Start App Initialization
+    window.addEventListener('DOMContentLoaded', initAuth);
+  </script>
 </body>
 </html>
